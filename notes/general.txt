@@ -1,0 +1,1 @@
+Consider using `petgraph`, a generic Graph library (which includes `dijkstra`)
