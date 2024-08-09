@@ -3,7 +3,9 @@ use itertools::*;
 use ndarray::*;
 use num::*;
 use pathfinding::{
-    directed::dijkstra::dijkstra, prelude::{build_path, dijkstra_all}, *
+    directed::dijkstra::dijkstra,
+    prelude::{build_path, dijkstra_all},
+    *,
 };
 use std::collections::HashMap;
 
@@ -79,7 +81,7 @@ pub enum CardinalDirection {
 }
 
 // TODO:
-// Eventually, we will remove spatial dependence (the Vec2), also return any of the 8
+// Eventually, remove spatial dependence (the Vec2), also return any of the 8
 // predefined directions (N, NE, E, SE, etc.)
 #[derive(Debug)]
 pub struct VectorField {
@@ -104,8 +106,6 @@ impl VectorField {
             pair_usize::neighbors(&p)
                 .iter()
                 // .map(|(x, y)| {
-                //     println!("mappy mc map face");
-                //
                 //     if cost_field[(*x, *y)] == 255 {
                 //         panic!("impassable");
                 //     } else {
@@ -218,7 +218,13 @@ pub fn from_field_index<T>(a: &Array2<T>, center: Option<&Vec2>, index: &Pairusi
     Vec2::new(*x as f32, *y as f32) + center - Vec2::new(sz_x as f32 / 2., sz_y as f32 / 2.)
 }
 
-pub fn dijkstra_in_cost_field(cost_field: &Array2<u8>, center: Option<&Vec2>, start: &Pairusize, goal: &Pairusize) -> Option<(Vec<Vec2>, u32)> {
+/// Get a direct path from `start` to `goal`
+pub fn dijkstra_in_cost_field(
+    cost_field: &Array2<u8>,
+    center: Option<&Vec2>,
+    start: &Pairusize,
+    goal: &Pairusize,
+) -> Option<(Vec<Vec2>, u32)> {
     let (x_size, y_size) = match cost_field.shape() {
         [x, y] => (*x, *y),
         _ => unreachable!(),
@@ -229,23 +235,35 @@ pub fn dijkstra_in_cost_field(cost_field: &Array2<u8>, center: Option<&Vec2>, st
     // field (note that 255 < 2 ^ 16, so we're safely in range) to preserve the primary factor for
     // calculating the integration field, then also add the distance squared of the nodes in
     // cartesian space to the cost.
-    dijkstra(start, |&p: &Pairusize| {
-        pair_usize::neighbors(&p)
-            .iter()
-            .filter(|(x, y)| {
-                (0..x_size).contains(x)
-                    && (0..y_size).contains(y)
-                    && cost_field[(*x, *y)] != u8::MAX
-            })
-            .map(|&o_p| {
-                (
-                    o_p,
-                    (cost_field[o_p] as u32).pow(2)
-                        + (o_p.0.abs_diff(p.0) + o_p.1.abs_diff(p.1)) as u32,
-                )
-            })
-            .collect::<Vec<((usize, usize), u32)>>()
-    }, |node| node == goal).map(|(v, c)| (v.iter().map(|pair| from_field_index(cost_field, center, pair)).collect(), c))
+    dijkstra(
+        start,
+        |&p: &Pairusize| {
+            pair_usize::neighbors(&p)
+                .iter()
+                .filter(|(x, y)| {
+                    (0..x_size).contains(x)
+                        && (0..y_size).contains(y)
+                        && cost_field[(*x, *y)] != u8::MAX
+                })
+                .map(|&o_p| {
+                    (
+                        o_p,
+                        (cost_field[o_p] as u32).pow(2)
+                            + (o_p.0.abs_diff(p.0) + o_p.1.abs_diff(p.1)) as u32,
+                    )
+                })
+                .collect::<Vec<((usize, usize), u32)>>()
+        },
+        |node| node == goal,
+    )
+    .map(|(v, c)| {
+        (
+            v.iter()
+                .map(|pair| from_field_index(cost_field, center, pair))
+                .collect(),
+            c,
+        )
+    })
 }
 // #[cfg(test)]
 // mod tests {
